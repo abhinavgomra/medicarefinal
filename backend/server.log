@@ -1,0 +1,39 @@
+[dotenv@17.2.2] injecting env (14) from .env -- tip: ≡ƒôí auto-backup env with Radar: https://dotenvx.com/radar
+MongoDB connected: mongodb://127.0.0.1:27017/medicare
+Upserted extra doctors: 10
+API running on port 5000
+[MAIL] SMTP configured { host: 'smtp.gmail.com', port: 587 }
+SyntaxError: Expected property name or '}' in JSON at position 1 (line 1 column 2)
+    at JSON.parse (<anonymous>)
+    at parse (C:\Users\abhin\project\Medi_Care-main\Medicare\backend\node_modules\body-parser\lib\types\json.js:77:19)
+    at C:\Users\abhin\project\Medi_Care-main\Medicare\backend\node_modules\body-parser\lib\read.js:123:18
+    at AsyncResource.runInAsyncScope (node:async_hooks:214:14)
+    at invokeCallback (C:\Users\abhin\project\Medi_Care-main\Medicare\backend\node_modules\raw-body\index.js:238:16)
+    at done (C:\Users\abhin\project\Medi_Care-main\Medicare\backend\node_modules\raw-body\index.js:227:7)
+    at IncomingMessage.onEnd (C:\Users\abhin\project\Medi_Care-main\Medicare\backend\node_modules\raw-body\index.js:287:7)
+    at IncomingMessage.emit (node:events:519:28)
+    at endReadableNT (node:internal/streams/readable:1698:12)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  expose: true,
+  statusCode: 400,
+  status: 400,
+  body: '{\\',
+  type: 'entity.parse.failed'
+}
+SyntaxError: Expected property name or '}' in JSON at position 1 (line 1 column 2)
+    at JSON.parse (<anonymous>)
+    at parse (C:\Users\abhin\project\Medi_Care-main\Medicare\backend\node_modules\body-parser\lib\types\json.js:77:19)
+    at C:\Users\abhin\project\Medi_Care-main\Medicare\backend\node_modules\body-parser\lib\read.js:123:18
+    at AsyncResource.runInAsyncScope (node:async_hooks:214:14)
+    at invokeCallback (C:\Users\abhin\project\Medi_Care-main\Medicare\backend\node_modules\raw-body\index.js:238:16)
+    at done (C:\Users\abhin\project\Medi_Care-main\Medicare\backend\node_modules\raw-body\index.js:227:7)
+    at IncomingMessage.onEnd (C:\Users\abhin\project\Medi_Care-main\Medicare\backend\node_modules\raw-body\index.js:287:7)
+    at IncomingMessage.emit (node:events:519:28)
+    at endReadableNT (node:internal/streams/readable:1698:12)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  expose: true,
+  statusCode: 400,
+  status: 400,
+  body: '{\\ email\\:\\test3@example.com\\,\\password\\:\\pass\\}',
+  type: 'entity.parse.failed'
+}

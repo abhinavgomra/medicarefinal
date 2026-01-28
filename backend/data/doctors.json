@@ -1,0 +1,8 @@
+[
+  { "id": 1, "name": "Dr. Sarah Johnson", "specialty": "Cardiology", "rating": 4.8, "experience": 15, "location": "Medical Center", "languages": ["English"], "acceptingNew": true },
+  { "id": 2, "name": "Dr. Amit Verma", "specialty": "Dermatology", "rating": 4.6, "experience": 10, "location": "Dermacare Clinic", "languages": ["English", "Hindi"], "acceptingNew": true },
+  { "id": 3, "name": "Dr. Emily Chen", "specialty": "Pediatrics", "rating": 4.9, "experience": 12, "location": "Children's Hospital", "languages": ["English", "Mandarin"], "acceptingNew": false },
+  { "id": 4, "name": "Dr. Michael Brown", "specialty": "Orthopedics", "rating": 4.5, "experience": 11, "location": "City Ortho Care", "languages": ["English"], "acceptingNew": true },
+  { "id": 5, "name": "Dr. Aisha Khan", "specialty": "Neurology", "rating": 4.7, "experience": 13, "location": "Neuro Clinic", "languages": ["English", "Urdu"], "acceptingNew": true }
+]
+
