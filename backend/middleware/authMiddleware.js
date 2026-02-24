@@ -20,4 +20,10 @@ function adminOnly(req, res, next) {
     next();
 }
 
-module.exports = { authMiddleware, adminOnly };
+function doctorOnly(req, res, next) {
+    if (!req.user) return res.status(401).json({ error: 'unauthorized' });
+    if (req.user.role !== 'doctor') return res.status(403).json({ error: 'doctor access required' });
+    next();
+}
+
+module.exports = { authMiddleware, adminOnly, doctorOnly };

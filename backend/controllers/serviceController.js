@@ -1,12 +1,22 @@
 const { createWorker } = require('tesseract.js');
 const env = require('../config/env');
-const twilio = require('twilio');
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+const { getSmsClient, getTwilioConfigStatus } = require('../services/smsService');
+const User = require('../models/User');
 
-// Twilio Client
-let smsClient = null;
-if (env.TWILIO_ACCOUNT_SID && env.TWILIO_ACCOUNT_SID.startsWith('AC') && env.TWILIO_AUTH_TOKEN) {
-  smsClient = twilio(env.TWILIO_ACCOUNT_SID, env.TWILIO_AUTH_TOKEN);
+const smsClient = getSmsClient();
+
+/** Normalize phone to E.164 for Twilio (e.g. 7625959963 or 917625959963 -> +919762595963) */
+function normalizePhoneToE164(phone) {
+  const s = String(phone || '').replace(/\D/g, '');
+  if (!s || s.length < 10) return null;
+  if (s.length === 10 && (s.startsWith('6') || s.startsWith('7') || s.startsWith('8') || s.startsWith('9'))) {
+    return '+91' + s;
+  }
+  if (s.length === 12 && s.startsWith('91')) return '+' + s;
+  if (s.length === 11 && s.startsWith('0')) return normalizePhoneToE164(s.slice(1));
+  if (s.length >= 10) return '+' + s;
+  return null;
 }
 
 // Google AI Client
@@ -15,18 +25,43 @@ if (env.GEMINI_API_KEY) {
   genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
 }
 
+let ocrWorker = null;
+let ocrWorkerInitPromise = null;
+let ocrQueue = Promise.resolve();
+
+async function getOcrWorker() {
+  if (ocrWorker) return ocrWorker;
+  if (!ocrWorkerInitPromise) {
+    ocrWorkerInitPromise = (async () => {
+      const worker = await createWorker();
+      await worker.loadLanguage('eng');
+      await worker.initialize('eng');
+      ocrWorker = worker;
+      return worker;
+    })().catch((err) => {
+      ocrWorkerInitPromise = null;
+      throw err;
+    });
+  }
+  return ocrWorkerInitPromise;
+}
+
+function enqueueOcrTask(task) {
+  const run = ocrQueue.then(task);
+  // Keep queue alive even if one task fails.
+  ocrQueue = run.catch(() => { });
+  return run;
+}
+
 exports.ocrPrescription = async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'file required' });
-  const worker = await createWorker();
   try {
-    await worker.load();
-    await worker.loadLanguage('eng');
-    await worker.initialize('eng');
-    const { data } = await worker.recognize(req.file.buffer);
-    await worker.terminate();
+    const { data } = await enqueueOcrTask(async () => {
+      const worker = await getOcrWorker();
+      return worker.recognize(req.file.buffer);
+    });
     res.json({ text: data?.text || '' });
   } catch (err) {
-    try { await worker.terminate(); } catch (_) { }
     console.error("OCR Error:", err);
     res.status(500).json({ error: 'ocr_failed', details: err.message });
   }
@@ -63,33 +98,60 @@ exports.transcribeVoice = async (req, res) => {
 
 exports.startVerify = async (req, res) => {
   try {
+    const twilioConfig = getTwilioConfigStatus();
     if (!smsClient || !env.TWILIO_VERIFY_SERVICE_SID) {
-      return res.status(400).json({ error: 'verify_not_configured' });
+      return res.status(400).json({
+        error: 'Phone verification (SMS) is not configured. Set up Twilio Verify in .env',
+        details: twilioConfig.issues.join('; ') || 'Set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN and TWILIO_VERIFY_SERVICE_SID'
+      });
     }
     const { phone } = req.body || {};
     if (!phone) return res.status(400).json({ error: 'phone required' });
+    const e164 = normalizePhoneToE164(phone) || phone;
     const result = await smsClient.verify.v2.services(env.TWILIO_VERIFY_SERVICE_SID)
-      .verifications.create({ to: phone, channel: 'sms' });
+      .verifications.create({ to: e164, channel: 'sms' });
     return res.json({ sid: result.sid, status: result.status });
   } catch (err) {
     console.error("Verify Start Error:", err);
-    return res.status(500).json({ error: 'verify_start_failed' });
+    const msg = err.code === 21211
+      ? 'Invalid phone number format. Use e.g. +919876543210 or 9876543210'
+      : err.code === 20003
+        ? 'Twilio authentication failed. Check TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN'
+        : err.message;
+    return res.status(500).json({ error: 'verify_start_failed', details: msg });
   }
 };
 
 exports.checkVerify = async (req, res) => {
   try {
+    const twilioConfig = getTwilioConfigStatus();
     if (!smsClient || !env.TWILIO_VERIFY_SERVICE_SID) {
-      return res.status(400).json({ error: 'verify_not_configured' });
+      return res.status(400).json({
+        error: 'Phone verification is not configured',
+        details: twilioConfig.issues.join('; ') || 'Set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN and TWILIO_VERIFY_SERVICE_SID'
+      });
     }
     const { phone, code } = req.body || {};
     if (!phone || !code) return res.status(400).json({ error: 'phone and code required' });
+    const e164 = normalizePhoneToE164(phone) || phone;
     const check = await smsClient.verify.v2.services(env.TWILIO_VERIFY_SERVICE_SID)
-      .verificationChecks.create({ to: phone, code });
-    return res.json({ status: check.status, valid: check.status === 'approved' });
+      .verificationChecks.create({ to: e164, code: String(code).trim() });
+    const valid = check.status === 'approved';
+    if (valid && req.user) {
+      await User.findOneAndUpdate(
+        { email: req.user.email },
+        { phoneVerified: true, phone: e164 }
+      );
+    }
+    return res.json({ status: check.status, valid });
   } catch (err) {
     console.error("Verify Check Error:", err);
-    return res.status(500).json({ error: 'verify_check_failed' });
+    const msg = err.code === 20404
+      ? 'Invalid or expired code. Request a new one.'
+      : err.code === 20003
+        ? 'Twilio authentication failed. Check TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN'
+        : err.message;
+    return res.status(500).json({ error: 'verify_check_failed', details: msg });
   }
 };
 

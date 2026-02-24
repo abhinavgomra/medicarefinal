@@ -12,7 +12,21 @@ const doctorSchema = new mongoose.Schema({
     acceptingNew: { type: Boolean, default: true },
     fees: { type: Number, default: 0 },
     clinicHours: { type: String, default: '' },
-    images: { type: [String], default: [] }
+    images: { type: [String], default: [] },
+    degree: { type: String, default: '', trim: true },
+    qualifications: { type: [String], default: [] },
+    hospital: { type: String, default: '', trim: true },
+    about: { type: String, default: '', trim: true, maxlength: 2000 }
 }, { timestamps: true });
+
+doctorSchema.set('toJSON', {
+    virtuals: true,
+    versionKey: false,
+    transform: function (_doc, ret) {
+        ret.mongoId = String(ret._id);
+        delete ret._id;
+        return ret;
+    }
+});
 
 module.exports = mongoose.model('Doctor', doctorSchema);

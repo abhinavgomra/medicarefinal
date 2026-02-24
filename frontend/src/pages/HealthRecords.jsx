@@ -1,11 +1,18 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardTitle } from '../components/Card';
-import { DocumentTextIcon, CalendarIcon, UserIcon, ArrowDownTrayIcon, ShareIcon } from '@heroicons/react/24/outline';
+import { CalendarIcon, UserIcon, ArrowDownTrayIcon, ShareIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { PageTransition } from '../components/PageTransition';
 import { motion } from 'framer-motion';
+import { getTelemedicineAppointments, getTelemedicineMessages } from '../utils/api';
 
 const HealthRecords = () => {
   const [activeTab, setActiveTab] = useState('all');
+  const [conversationAppointments, setConversationAppointments] = useState([]);
+  const [selectedConversationAppointmentId, setSelectedConversationAppointmentId] = useState('');
+  const [conversationMessages, setConversationMessages] = useState([]);
+  const [conversationLoading, setConversationLoading] = useState(false);
+  const [messagesLoading, setMessagesLoading] = useState(false);
+  const [conversationError, setConversationError] = useState('');
 
   const records = [
     {
@@ -49,6 +56,15 @@ const HealthRecords = () => {
   ];
 
   const filteredRecords = activeTab === 'all' ? records : records.filter(r => r.category === activeTab);
+  const selectedConversationAppointment = useMemo(
+    () => conversationAppointments.find((a) => a.id === selectedConversationAppointmentId) || null,
+    [conversationAppointments, selectedConversationAppointmentId]
+  );
+
+  const carePointCount = useMemo(
+    () => conversationMessages.filter((m) => m.messageType === 'care-point').length,
+    [conversationMessages]
+  );
 
   const tabs = [
     { id: 'all', label: 'All Records' },
@@ -56,6 +72,55 @@ const HealthRecords = () => {
     { id: 'lab', label: 'Labs' },
     { id: 'prescription', label: 'Rx' },
   ];
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      setConversationLoading(true);
+      setConversationError('');
+      try {
+        const res = await getTelemedicineAppointments({ page: 1, limit: 100, status: null });
+        if (!mounted) return;
+        const items = Array.isArray(res?.items) ? res.items : [];
+        setConversationAppointments(items);
+        setSelectedConversationAppointmentId((prev) => (
+          items.some((it) => it.id === prev) ? prev : (items[0]?.id || '')
+        ));
+      } catch (err) {
+        if (!mounted) return;
+        setConversationError(err.message || 'Failed to load conversation history');
+        setConversationAppointments([]);
+        setSelectedConversationAppointmentId('');
+      } finally {
+        if (mounted) setConversationLoading(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    if (!selectedConversationAppointmentId) {
+      setConversationMessages([]);
+      return () => { mounted = false; };
+    }
+    (async () => {
+      setMessagesLoading(true);
+      setConversationError('');
+      try {
+        const res = await getTelemedicineMessages(selectedConversationAppointmentId, { limit: 200 });
+        if (!mounted) return;
+        setConversationMessages(Array.isArray(res?.items) ? res.items : []);
+      } catch (err) {
+        if (!mounted) return;
+        setConversationError(err.message || 'Failed to load messages');
+        setConversationMessages([]);
+      } finally {
+        if (mounted) setMessagesLoading(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, [selectedConversationAppointmentId]);
 
   return (
     <PageTransition>
@@ -91,6 +156,99 @@ const HealthRecords = () => {
                   </button>
                 ))}
               </div>
+
+              {/* Telemedicine Conversation History */}
+              <Card variant="glass">
+                <CardContent className="p-6 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <CardTitle>Consultation Conversations</CardTitle>
+                    <button
+                      className="inline-flex items-center gap-2 text-sm font-medium text-primary-700 hover:text-primary-800"
+                      onClick={async () => {
+                        setConversationLoading(true);
+                        setConversationError('');
+                        try {
+                          const res = await getTelemedicineAppointments({ page: 1, limit: 100, status: null });
+                          const items = Array.isArray(res?.items) ? res.items : [];
+                          setConversationAppointments(items);
+                          setSelectedConversationAppointmentId((prev) => (
+                            items.some((it) => it.id === prev) ? prev : (items[0]?.id || '')
+                          ));
+                        } catch (err) {
+                          setConversationError(err.message || 'Failed to refresh conversations');
+                          setConversationAppointments([]);
+                          setSelectedConversationAppointmentId('');
+                        } finally {
+                          setConversationLoading(false);
+                        }
+                      }}
+                      disabled={conversationLoading}
+                    >
+                      <ArrowPathIcon className={`h-4 w-4 ${conversationLoading ? 'animate-spin' : ''}`} />
+                      Refresh
+                    </button>
+                  </div>
+
+                  {conversationError && (
+                    <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+                      {conversationError}
+                    </div>
+                  )}
+
+                  <div className="flex flex-col md:flex-row gap-3">
+                    <select
+                      className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white"
+                      value={selectedConversationAppointmentId}
+                      onChange={(e) => setSelectedConversationAppointmentId(e.target.value)}
+                      disabled={conversationLoading || conversationAppointments.length === 0}
+                    >
+                      {conversationAppointments.length === 0 && (
+                        <option value="">No telemedicine appointments found</option>
+                      )}
+                      {conversationAppointments.map((appt) => (
+                        <option key={appt.id} value={appt.id}>
+                          {appt.date || (appt.appointmentDate ? new Date(appt.appointmentDate).toLocaleString() : 'No date')} • {appt.status} • {appt.doctorName || `Doctor #${appt.doctorId}`}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+                      Care points: <span className="font-semibold text-gray-900">{carePointCount}</span>
+                    </div>
+                  </div>
+
+                  {selectedConversationAppointment && (
+                    <div className="text-xs text-gray-600">
+                      Appointment: {selectedConversationAppointment.id} • {selectedConversationAppointment.reason || 'No reason noted'}
+                    </div>
+                  )}
+
+                  <div className="rounded-xl border border-gray-200 bg-white p-3 max-h-72 overflow-y-auto space-y-2">
+                    {messagesLoading ? (
+                      <div className="text-sm text-gray-500">Loading conversation...</div>
+                    ) : conversationMessages.length === 0 ? (
+                      <div className="text-sm text-gray-400">No saved conversation for this appointment.</div>
+                    ) : (
+                      conversationMessages.map((msg) => {
+                        const isCarePoint = msg.messageType === 'care-point';
+                        return (
+                          <div
+                            key={msg.id}
+                            className={`rounded-lg border px-3 py-2 text-sm ${isCarePoint ? 'border-amber-300 bg-amber-50' : 'border-gray-200 bg-gray-50'}`}
+                          >
+                            <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+                              <span>
+                                {msg.senderEmail} {isCarePoint ? '• Care Point' : ''}
+                              </span>
+                              <span>{msg.createdAt ? new Date(msg.createdAt).toLocaleString() : ''}</span>
+                            </div>
+                            <div className="text-gray-800">{msg.text}</div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
 
               {/* Timeline */}
               <div className="relative">

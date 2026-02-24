@@ -13,10 +13,12 @@ import {
   UserCircleIcon,
   DocumentTextIcon,
   MicrophoneIcon,
+  BriefcaseIcon,
+  BuildingStorefrontIcon,
   ChevronDoubleLeftIcon,
   ChevronDoubleRightIcon,
 } from '@heroicons/react/24/outline';
-import { isAuthenticated } from '../utils/auth';
+import { isAuthenticated, isDoctor, isAdmin } from '../utils/auth';
 
 const navItems = [
   { path: '/', label: 'Home', icon: HomeIcon, protected: false },
@@ -31,12 +33,23 @@ const navItems = [
   { path: '/profile', label: 'Profile', icon: UserCircleIcon, protected: true },
   { path: '/prescription-ocr', label: 'Prescription OCR', icon: DocumentTextIcon, protected: true },
   { path: '/voice-control', label: 'Voice Control', icon: MicrophoneIcon, protected: true },
+  { path: '/doctor-portal', label: 'Doctor Portal', icon: BriefcaseIcon, protected: true, doctorOnly: true },
+  { path: '/admin/pharmacy', label: 'Pharmacy Admin', icon: BuildingStorefrontIcon, protected: true, adminOnly: true },
+];
+
+const doctorNavItems = [
+  { path: '/doctor-portal', label: 'Doctor Dashboard', icon: BriefcaseIcon, protected: true, doctorOnly: true },
+  { path: '/telemedicine', label: 'Telemedicine', icon: ComputerDesktopIcon, protected: true, doctorOnly: true },
+  { path: '/profile', label: 'Profile', icon: UserCircleIcon, protected: true, doctorOnly: true }
 ];
 
 const Sidebar = () => {
   const location = useLocation();
   const authed = isAuthenticated();
+  const doctor = isDoctor();
+  const admin = isAdmin();
   const [collapsed, setCollapsed] = useState(false);
+  const visibleItems = doctor ? doctorNavItems : navItems;
 
   useEffect(() => {
     const saved = localStorage.getItem('sidebarCollapsed');
@@ -53,8 +66,10 @@ const Sidebar = () => {
     <aside className={`hidden md:block ${collapsed ? 'md:w-16' : 'md:w-56 lg:w-64'} shrink-0 border-r border-gray-100 bg-white`}>
       <div className="sticky top-[56px] max-h-[calc(100vh-56px)] overflow-y-auto p-2">
         <nav className="space-y-1">
-          {navItems
+          {visibleItems
             .filter(item => (item.protected ? authed : true))
+            .filter(item => (item.doctorOnly ? doctor : true))
+            .filter(item => (item.adminOnly ? admin : true))
             .map(({ path, label, icon: Icon }) => {
               const active = location.pathname === path;
               return (
@@ -90,5 +105,3 @@ const Sidebar = () => {
 };
 
 export default Sidebar;
-
-

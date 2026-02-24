@@ -1,0 +1,91 @@
+[
+  {
+    "id": 1,
+    "name": "Aspirin Pro",
+    "description": "Advanced pain relief formula, 50 tablets",
+    "category": "Pain Relief",
+    "price": 5.99,
+    "image": "https://placeholder-image-service.onrender.com/image/200x200?prompt=White aspirin bottle minimalist packaging&id=aspirin",
+    "stock": 120,
+    "prescriptionRequired": false,
+    "active": true
+  },
+  {
+    "id": 2,
+    "name": "Amoxi-Care",
+    "description": "Prescription-grade antibiotic course",
+    "category": "Antibiotics",
+    "price": 12.99,
+    "image": "https://placeholder-image-service.onrender.com/image/200x200?prompt=Antibiotic box medicine packaging&id=amoxicillin",
+    "stock": 80,
+    "prescriptionRequired": true,
+    "active": true
+  },
+  {
+    "id": 3,
+    "name": "GlucoMet",
+    "description": "Blood sugar regulation support",
+    "category": "Diabetes Care",
+    "price": 8.99,
+    "image": "https://placeholder-image-service.onrender.com/image/200x200?prompt=Diabetes medication bottle blue label&id=metformin",
+    "stock": 100,
+    "prescriptionRequired": true,
+    "active": true
+  },
+  {
+    "id": 4,
+    "name": "VitaBoom C",
+    "description": "Immunity booster 1000mg",
+    "category": "Vitamins",
+    "price": 15.5,
+    "image": "https://placeholder-image-service.onrender.com/image/200x200?prompt=Orange Vitamin C bottle vibrant&id=vitac",
+    "stock": 140,
+    "prescriptionRequired": false,
+    "active": true
+  },
+  {
+    "id": 5,
+    "name": "AllergyEase",
+    "description": "Antihistamine tablets for seasonal allergy relief",
+    "category": "Allergy",
+    "price": 6.75,
+    "image": "https://images.unsplash.com/photo-1587854692152-cbe660dbde88?q=80&w=400&auto=format&fit=crop",
+    "stock": 90,
+    "prescriptionRequired": false,
+    "active": true
+  },
+  {
+    "id": 6,
+    "name": "CardioGuard",
+    "description": "Heart health support capsules",
+    "category": "Cardiology",
+    "price": 18.2,
+    "image": "https://images.unsplash.com/photo-1584362917165-526a968579e8?q=80&w=400&auto=format&fit=crop",
+    "stock": 60,
+    "prescriptionRequired": true,
+    "active": true
+  },
+  {
+    "id": 7,
+    "name": "Dermasoft Gel",
+    "description": "Skin soothing topical gel",
+    "category": "Dermatology",
+    "price": 9.45,
+    "image": "https://images.unsplash.com/photo-1611242320536-f12d3541249b?q=80&w=400&auto=format&fit=crop",
+    "stock": 110,
+    "prescriptionRequired": false,
+    "active": true
+  },
+  {
+    "id": 8,
+    "name": "NeuroCalm",
+    "description": "Nerve health and focus support tablets",
+    "category": "Neurology",
+    "price": 21.0,
+    "image": "https://images.unsplash.com/photo-1576602976047-174e57a47881?q=80&w=400&auto=format&fit=crop",
+    "stock": 70,
+    "prescriptionRequired": true,
+    "active": true
+  }
+]
+

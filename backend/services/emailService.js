@@ -69,4 +69,42 @@ async function sendAppointmentEmail({ doctorId, date, reason, userEmail }) {
     }
 }
 
-module.exports = { sendAppointmentEmail };
+async function sendAmbulanceLocationEmail({ location, userEmail, status = 'requested' }) {
+    try {
+        const transport = await initMailer();
+        if (!transport) return;
+
+        const lat = Number(location && location.lat);
+        const lng = Number(location && location.lng);
+        const mapsUrl = Number.isFinite(lat) && Number.isFinite(lng)
+            ? `https://maps.google.com/?q=${lat},${lng}`
+            : 'N/A';
+
+        const subject = `Ambulance alert location (${status})`;
+        const text = [
+            'Ambulance request location received.',
+            '',
+            `Status: ${status}`,
+            `Latitude: ${Number.isFinite(lat) ? lat : 'N/A'}`,
+            `Longitude: ${Number.isFinite(lng) ? lng : 'N/A'}`,
+            `Maps link: ${mapsUrl}`,
+            `Requested by: ${userEmail || 'unknown'}`
+        ].join('\n');
+
+        const info = await transport.sendMail({
+            from: env.SMTP_USER || 'no-reply@medicare.local',
+            to: env.EMAIL_TO,
+            subject,
+            text
+        });
+
+        const preview = nodemailer.getTestMessageUrl(info);
+        console.log('[MAIL] Ambulance location sent', { messageId: info && info.messageId, preview });
+        return { messageId: info && info.messageId, previewUrl: preview || '' };
+    } catch (err) {
+        console.error('[MAIL] Ambulance location send failed', err && err.message);
+        throw err;
+    }
+}
+
+module.exports = { sendAppointmentEmail, sendAmbulanceLocationEmail };

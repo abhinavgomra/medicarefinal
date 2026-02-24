@@ -1,10 +1,21 @@
 require('dotenv').config();
 
+function parseCsv(value) {
+    return String(value || '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+}
+
 const env = {
     PORT: process.env.PORT || 5000,
     JWT_SECRET: process.env.JWT_SECRET,
     MONGODB_URI: process.env.MONGODB_URI,
     USE_IN_MEMORY_DB: String(process.env.USE_IN_MEMORY_DB || 'true').toLowerCase() !== 'false',
+    FORCE_HTTPS: String(process.env.FORCE_HTTPS || 'false').toLowerCase() === 'true',
+
+    // Google Auth (optional)
+    GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
 
     // Twilio
     TWILIO_ACCOUNT_SID: process.env.TWILIO_ACCOUNT_SID,
@@ -23,6 +34,12 @@ const env = {
     SMTP_PORT: Number(process.env.SMTP_PORT || 587),
     SMTP_USER: process.env.SMTP_USER,
     SMTP_PASS: process.env.SMTP_PASS,
+
+    // Telemedicine (WebRTC)
+    TELEMEDICINE_STUN_SERVERS: parseCsv(process.env.TELEMEDICINE_STUN_SERVERS || 'stun:stun.l.google.com:19302'),
+    TELEMEDICINE_TURN_SERVERS: parseCsv(process.env.TELEMEDICINE_TURN_SERVERS || ''),
+    TELEMEDICINE_TURN_USERNAME: String(process.env.TELEMEDICINE_TURN_USERNAME || '').trim(),
+    TELEMEDICINE_TURN_CREDENTIAL: String(process.env.TELEMEDICINE_TURN_CREDENTIAL || '').trim()
 };
 
 // Validation for critical secrets

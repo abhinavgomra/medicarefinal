@@ -1,5 +1,6 @@
 const twilio = require('twilio');
 const env = require('../config/env');
+const emailService = require('../services/emailService');
 
 let nextAmbulanceRequestId = 1;
 const ambulanceRequests = [];
@@ -11,12 +12,29 @@ exports.requestAmbulance = async (req, res) => {
         if (!location || typeof location.lat !== 'number' || typeof location.lng !== 'number') {
             return res.status(400).json({ error: 'location with lat and lng required' });
         }
+        const requesterEmail =
+            (req.user && req.user.email) ||
+            req.headers['x-user-email'] ||
+            req.body.userEmail ||
+            '';
+        let emailNotificationSent = false;
+
+        try {
+            await emailService.sendAmbulanceLocationEmail({
+                location,
+                userEmail: requesterEmail,
+                status: 'requested'
+            });
+            emailNotificationSent = true;
+        } catch (_) { }
+
         // Simulate ambulance dispatch failure for demonstration
         const canSendAmbulance = false;
 
         if (!canSendAmbulance) {
             // Send SMS to user's phone number
             const userPhone = req.headers['x-user-phone'] || env.NOTIFY_TO_NUMBER;
+            let smsNotificationSent = false;
             if (userPhone && env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN && env.TWILIO_FROM_NUMBER) {
                 try {
                     const client = twilio(env.TWILIO_ACCOUNT_SID, env.TWILIO_AUTH_TOKEN);
@@ -25,11 +43,26 @@ exports.requestAmbulance = async (req, res) => {
                         from: env.TWILIO_FROM_NUMBER,
                         to: userPhone
                     });
+                    smsNotificationSent = true;
                 } catch (error) {
                     console.error('Failed to send SMS:', error.message);
                 }
             }
-            return res.status(503).json({ error: "We can't send it right now. A message has been sent to your number." });
+            const statusText = [];
+            if (smsNotificationSent) statusText.push('SMS');
+            if (emailNotificationSent) statusText.push('email');
+
+            const message = statusText.length
+                ? `We can't send it right now. Notification sent via ${statusText.join(' and ')}.`
+                : "We can't send it right now.";
+
+            return res.status(503).json({
+                error: message,
+                notifications: {
+                    sms: smsNotificationSent,
+                    email: emailNotificationSent
+                }
+            });
         }
 
         // If ambulance can be sent, create request (simplified)
